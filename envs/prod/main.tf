@@ -18,7 +18,8 @@ data "http" "my_ip" {
 }
 
 locals {
-  my_cidr = "${chomp(data.http.my_ip.response_body)}/32"
+  # En CI, data.http.my_ip renverrait l'IP du runner : admin_cidr (vars.ADMIN_CIDR) prend le pas.
+  my_cidr = var.admin_cidr != "" ? var.admin_cidr : "${chomp(data.http.my_ip.response_body)}/32"
   name    = "novasphere-${var.environment}-${var.owner}"
 }
 
@@ -55,6 +56,8 @@ module "monitoring" {
 
 # Refactoring sans destruction : les ressources de S1 changent d'adresse
 resource "local_file" "inventory" {
+  # false en CI : le fichier n'existe pas sur le runner et serait recree a chaque plan
+  count                = var.generate_inventory ? 1 : 0
   filename             = "${path.module}/../../ansible/inventory-${var.environment}.ini"
   file_permission      = "0644"
   directory_permission = "0755"
@@ -62,4 +65,9 @@ resource "local_file" "inventory" {
     web_ip        = module.web.public_ip
     monitoring_ip = module.monitoring.public_ip
   })
+}
+
+moved {
+  from = local_file.inventory
+  to   = local_file.inventory[0]
 }
