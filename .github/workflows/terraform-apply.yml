@@ -39,12 +39,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.17.1"
       - run: terraform init -input=false
-      - run: terraform plan -input=false -out=tfplan
-      - run: terraform apply -input=false tfplan
+      - run: terraform plan -no-color -input=false -out=tfplan
+      - run: terraform apply -no-color -input=false tfplan
 
   apply-prod:
     if: github.event_name == 'push'
@@ -75,12 +75,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.17.1"
       - run: terraform init -input=false
-      - run: terraform plan -input=false -out=tfplan
-      - run: terraform apply -input=false tfplan
+      - run: terraform plan -no-color -input=false -out=tfplan
+      - run: terraform apply -no-color -input=false tfplan
 
   drift:
     if: github.event_name != 'push'
@@ -112,7 +112,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.17.1"
           terraform_wrapper: false # le wrapper renvoie 0 pour le code 2 de -detailed-exitcode

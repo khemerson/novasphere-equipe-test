@@ -69,10 +69,11 @@ resource "aws_lb" "web" {
 }
 
 resource "aws_lb_target_group" "web" {
-  name     = "novasphere-${var.environment}-web"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = module.vpc.vpc_id
+  name                 = "novasphere-${var.environment}-web"
+  port                 = 80
+  protocol             = "HTTP"
+  vpc_id               = module.vpc.vpc_id
+  deregistration_delay = 30
 
   health_check {
     path    = "/"
