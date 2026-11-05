@@ -35,3 +35,15 @@ variable "environment" {
     error_message = "environment doit valoir dev ou prod."
   }
 }
+
+variable "admin_cidr" {
+  description = "CIDR SSH administrateur ; vide = IP publique du poste qui execute Terraform"
+  type        = string
+  default     = ""
+}
+
+variable "generate_inventory" {
+  description = "Genere l'inventaire Ansible local (false en CI)"
+  type        = bool
+  default     = true
+}

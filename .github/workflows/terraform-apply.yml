@@ -1,0 +1,126 @@
+name: Terraform Apply
+on:
+  push:
+    branches: [main]
+    paths: ["envs/**", "modules/**"]
+  # Pas de cron nocturne : a 3 h, les identifiants du lab ont expire.
+  # La detection de derive se lance a la main (workflow_dispatch) pendant une session.
+  workflow_dispatch:
+
+# Learner Lab : pas de federation OIDC (IAM verrouille). Identifiants de session du lab
+# en secrets du depot, a mettre a jour a chaque Start Lab (validite 4 h).
+permissions:
+  contents: read
+
+jobs:
+  apply-dev:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: dev
+    concurrency:
+      group: tfstate-dev
+    # terraform.tfvars n'est pas versionne : les variables viennent du depot (voir README)
+    env:
+      TF_VAR_owner: ${{ vars.OWNER }}
+      TF_VAR_environment: dev
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+    defaults:
+      run:
+        working-directory: envs/dev
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cle publique SSH (lue par aws_key_pair)
+        env:
+          SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
+        run: mkdir -p ~/.ssh && printf '%s\n' "$SSH_PUBLIC_KEY" > ~/.ssh/novasphere.pub
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.1"
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -out=tfplan
+      - run: terraform apply -input=false tfplan
+
+  apply-prod:
+    if: github.event_name == 'push'
+    needs: apply-dev
+    runs-on: ubuntu-latest
+    environment: prod
+    concurrency:
+      group: tfstate-prod
+    # terraform.tfvars n'est pas versionne : les variables viennent du depot (voir README)
+    env:
+      TF_VAR_owner: ${{ vars.OWNER }}
+      TF_VAR_environment: prod
+      TF_VAR_admin_cidr: ${{ vars.ADMIN_CIDR }}
+      TF_VAR_instance_type: t3.small          # meme valeur que envs/prod/terraform.tfvars.example
+      TF_VAR_generate_inventory: "false"
+    defaults:
+      run:
+        working-directory: envs/prod
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cle publique SSH (lue par aws_key_pair)
+        env:
+          SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
+        run: mkdir -p ~/.ssh && printf '%s\n' "$SSH_PUBLIC_KEY" > ~/.ssh/novasphere.pub
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.1"
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -out=tfplan
+      - run: terraform apply -input=false tfplan
+
+  drift:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [dev, prod]
+    # terraform.tfvars n'est pas versionne : les variables viennent du depot (voir README).
+    # Une variable TF_VAR_ que la racine ne declare pas est ignoree (db_password en prod, admin_cidr en dev).
+    env:
+      TF_VAR_owner: ${{ vars.OWNER }}
+      TF_VAR_environment: ${{ matrix.env }}
+      TF_VAR_instance_type: ${{ matrix.env == 'prod' && 't3.small' || 't3.micro' }}
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      TF_VAR_admin_cidr: ${{ vars.ADMIN_CIDR }}
+      TF_VAR_generate_inventory: "false"
+    defaults:
+      run:
+        working-directory: envs/${{ matrix.env }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cle publique SSH (lue par aws_key_pair)
+        env:
+          SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
+        run: mkdir -p ~/.ssh && printf '%s\n' "$SSH_PUBLIC_KEY" > ~/.ssh/novasphere.pub
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.1"
+      - run: terraform init -input=false
+      - name: Detecter la derive
+        run: |
+          set +e
+          terraform plan -input=false -detailed-exitcode -no-color
+          code=$?
+          set -e
+          if [ "$code" -eq 2 ]; then echo "::error::Derive detectee sur ${{ matrix.env }}"; exit 1; fi
+          exit $code
