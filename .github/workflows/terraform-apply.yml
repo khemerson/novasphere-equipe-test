@@ -28,23 +28,23 @@ jobs:
       run:
         working-directory: envs/dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Cle publique SSH (lue par aws_key_pair)
         env:
           SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
         run: mkdir -p ~/.ssh && printf '%s\n' "$SSH_PUBLIC_KEY" > ~/.ssh/novasphere.pub
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.17.1"
       - run: terraform init -input=false
-      - run: terraform plan -input=false -out=tfplan
-      - run: terraform apply -input=false tfplan
+      - run: terraform plan -no-color -input=false -out=tfplan
+      - run: terraform apply -no-color -input=false tfplan
 
   apply-prod:
     if: github.event_name == 'push'
@@ -64,23 +64,23 @@ jobs:
       run:
         working-directory: envs/prod
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Cle publique SSH (lue par aws_key_pair)
         env:
           SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
         run: mkdir -p ~/.ssh && printf '%s\n' "$SSH_PUBLIC_KEY" > ~/.ssh/novasphere.pub
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.17.1"
       - run: terraform init -input=false
-      - run: terraform plan -input=false -out=tfplan
-      - run: terraform apply -input=false tfplan
+      - run: terraform plan -no-color -input=false -out=tfplan
+      - run: terraform apply -no-color -input=false tfplan
 
   drift:
     if: github.event_name != 'push'
@@ -101,18 +101,18 @@ jobs:
       run:
         working-directory: envs/${{ matrix.env }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Cle publique SSH (lue par aws_key_pair)
         env:
           SSH_PUBLIC_KEY: ${{ vars.SSH_PUBLIC_KEY }}
         run: mkdir -p ~/.ssh && printf '%s\n' "$SSH_PUBLIC_KEY" > ~/.ssh/novasphere.pub
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.17.1"
           terraform_wrapper: false # le wrapper renvoie 0 pour le code 2 de -detailed-exitcode
