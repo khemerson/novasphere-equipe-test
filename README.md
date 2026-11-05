@@ -41,3 +41,4 @@ scripts/     stop-evening.sh, start-morning.sh
 ```
 
 Les fichiers `ansible/inventory-<env>.ini` ne sont pas versionnes : ils sont produits par `terraform apply`.
+
