@@ -65,7 +65,7 @@ resource "aws_lb" "web" {
   load_balancer_type = "application"
   subnets            = module.vpc.public_subnets
   security_groups    = [aws_security_group.alb.id]
-  idle_timeout       = 120
+  idle_timeout       = 90
 }
 
 resource "aws_lb_target_group" "web" {
