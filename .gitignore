@@ -1,0 +1,20 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+plan.txt
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+
+# Ansible : inventaires generes et secrets
+ansible/inventory*.ini
+ansible/.vault_pass
+*.retry
+
+# Cles et environnement
+*.pem
+.env

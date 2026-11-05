@@ -1,0 +1,47 @@
+# =============================================================================
+# FICHIER DOCUMENTAIRE (extension .exemple : Terraform ne le lit pas)
+#
+# Role d'instance au moindre privilege, tel qu'on l'ecrit dans un compte AWS
+# classique. Dans le Learner Lab, IAM est verrouille : la creation de roles et de
+# profils d'instance est refusee (Readme du lab, section IAM). Le depot utilise
+# donc le profil precree LabInstanceProfile (role LabRole), aux droits larges.
+#
+# A savoir lire et expliquer en soutenance : c'est ce code qui serait deploye
+# en entreprise. Pour l'activer dans un compte classique : renommer en .tf et
+# passer var.instance_profile_name a aws_iam_instance_profile.web.name.
+# =============================================================================
+
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "ec2_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "web" {
+  name               = "novasphere-${var.environment}-web"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
+}
+
+resource "aws_iam_role_policy" "read_secrets" {
+  name = "read-secrets"
+  role = aws_iam_role.web.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ssm:GetParameter"]
+      Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/novasphere/${var.environment}/*"
+    }]
+  })
+}
+
+resource "aws_iam_instance_profile" "web" {
+  name = "novasphere-${var.environment}-web"
+  role = aws_iam_role.web.name
+}
