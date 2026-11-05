@@ -115,6 +115,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.17.1"
+          terraform_wrapper: false # le wrapper renvoie 0 pour le code 2 de -detailed-exitcode
       - run: terraform init -input=false
       - name: Detecter la derive
         run: |
